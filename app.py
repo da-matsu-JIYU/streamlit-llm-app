@@ -1,12 +1,39 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage  # ←ここが重要
+from langchain_core.messages import SystemMessage, HumanMessage
 
 
-load_dotenv("llm.env")
+# =========================
+# 0) API Key 読み込み
+#   - Streamlit Cloud: Secrets
+#   - Local: llm.env（ある場合のみ）
+# =========================
+def load_api_key():
+    # 1) Streamlit Cloud（Secrets）
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+            return
+    except Exception:
+        pass
+
+    # 2) Local（llm.envが存在するなら読む）
+    if os.path.exists("llm.env"):
+        try:
+            from dotenv import load_dotenv  # ← dotenv はローカルでだけ必要
+            load_dotenv("llm.env")
+        except Exception:
+            # dotenvが無くても、環境変数がセットされていれば動くので握りつぶす
+            pass
+
+
+load_api_key()
+
+if not os.getenv("OPENAI_API_KEY"):
+    st.error("OPENAI_API_KEY が未設定です。Streamlit Secrets か llm.env（ローカル）で設定してください。")
+    st.stop()
 
 def generate_answer(user_text: str, expert_type: str) -> str:
     expert_system_messages = {
