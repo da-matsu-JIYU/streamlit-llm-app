@@ -1,14 +1,45 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
+
+# ★ 必ず最初のStreamlitコマンドにする（超重要）
+st.set_page_config(page_title="専門家AI相談アプリ", page_icon="🤖")
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage  # ←ここが重要
+from langchain_core.messages import SystemMessage, HumanMessage
 
 
-load_dotenv("OPENAI_API_KEY")
+# =========================
+# 0) API Key 読み込み
+#   - Streamlit Cloud: Secrets
+#   - Local: llm.env（あれば） or OS環境変数
+# =========================
+def load_api_key():
+    # 1) Streamlit Secrets（Cloud推奨）
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+            return
+    except Exception:
+        pass
+
+    # 2) ローカル：llm.env があるなら読み込む
+    if os.path.exists("llm.env"):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv("llm.env")
+        except Exception:
+            pass
+
+load_api_key()
+
+if not os.getenv("OPENAI_API_KEY"):
+    st.error("OPENAI_API_KEY が未設定です。CloudではSecrets、ローカルでは llm.env / 環境変数で設定してください。")
+    st.stop()
 
 
+# =========================
+# 1) LLM呼び出し関数（要件：入力テキスト＋選択値 → 回答）
+# =========================
 def generate_answer(user_text: str, expert_type: str) -> str:
     expert_system_messages = {
         "育児アドバイザー": (
@@ -35,8 +66,9 @@ def generate_answer(user_text: str, expert_type: str) -> str:
     return result.content
 
 
-
-st.set_page_config(page_title="専門家AI相談アプリ", page_icon="🤖")
+# =========================
+# 2) Streamlit UI
+# =========================
 st.title("🤖 専門家AI相談アプリ（LangChain × Streamlit）")
 
 st.markdown(
@@ -73,4 +105,4 @@ if submitted:
             except Exception as e:
                 st.error(f"エラーが発生しました: {e}")
 
-st.caption("※ OPENAI_API_KEY は llm.env から読み込みます。")
+st.caption("※ CloudではSecrets、ローカルでは llm.env / 環境変数を使用します。")
